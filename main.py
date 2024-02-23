@@ -70,6 +70,6 @@ if 'scraped_data' in st.session_state and st.session_state['scraped_data']:
             answer = ask_gpt(st.session_state['scraped_data'], question)
             if answer:
                 # Enhanced text area with copyable output
-                st.text_area("GPT's response:", value=answer, height=100, key="gpt_response")
+                st.text_area("GPT's response:", value=answer, height=300, key="gpt_response")
         else:
             st.error("Please provide an OpenAI API key to ask GPT.")

@@ -15,11 +15,11 @@ def scrape_website(url, css_class):
             # Find elements with the given CSS class
             elements = soup.find_all(class_=css_class)
             # Extract and return the text from each element
-            return [element.text for element in elements]
+            return "\n".join([element.text.strip() for element in elements])
         else:
-            return [f"Failed to fetch the website, status code: {response.status_code}"]
+            return f"Failed to fetch the website, status code: {response.status_code}"
     except Exception as e:
-        return [f"An error occurred: {str(e)}"]
+        return f"An error occurred: {str(e)}"
 
 # Streamlit UI components
 st.title("Website Scraper")
@@ -33,14 +33,12 @@ css_class = st.text_input("Enter the CSS class:")
 # Button to start the scraping process
 if st.button("Scrape"):
     if url and css_class:
-        # Call the scrape_website function and display the results
+        # Call the scrape_website function
         results = scrape_website(url, css_class)
         if results:
-            st.write("Scraped values:")
-            for result in results:
-                st.text(result)
+            # Display the results in a text area, making it easy to copy
+            st.text_area("Scraped values:", value=results, height=300)
         else:
             st.write("No results found.")
     else:
         st.write("Please enter both URL and CSS class.")
-

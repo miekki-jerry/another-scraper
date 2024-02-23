@@ -9,3 +9,6 @@ After this type you api key and ask questions and give commands such as:
 - return average
 - translate to polish
 ...
+
+NOTE:
+I'm not storing API keys.

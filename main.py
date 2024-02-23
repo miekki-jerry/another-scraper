@@ -1,44 +1,75 @@
-# Import necessary libraries
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
+from openai import OpenAI
+
+# Set page title and icon
+st.set_page_config(page_title="GPT-based Web Scraper", page_icon="🔍")
 
 # Function to perform web scraping
 def scrape_website(url, css_class):
     try:
-        # Fetch the content of the website
         response = requests.get(url)
-        # Check if the request was successful
         if response.status_code == 200:
-            # Parse the HTML content
             soup = BeautifulSoup(response.text, 'html.parser')
-            # Find elements with the given CSS class
             elements = soup.find_all(class_=css_class)
-            # Extract and return the text from each element
-            return "\n".join([element.text.strip() for element in elements])
+            results = "\n".join([element.text.strip() for element in elements])
+            if results:
+                st.session_state['scraped_data'] = results
+                return results
         else:
             return f"Failed to fetch the website, status code: {response.status_code}"
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
-# Streamlit UI components
-st.title("Website Scraper")
+# Function to query GPT with the scraped data
+def ask_gpt(scraped_data, user_query):
+    client = OpenAI(api_key=st.session_state['api_key'])
+    system_message = f"You are a helpful assistant. Given the following scraped data, answer the user's question: {user_query}"
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": scraped_data}
+    ]
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages
+        )
+        response_message = completion.choices[0].message.content
+        return response_message
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
 
-# User input for URL
-url = st.text_input("Enter the URL to scrape:")
+# Initialize session state for storing API key if not already present
+if 'api_key' not in st.session_state:
+    st.session_state['api_key'] = ''
 
-# User input for CSS class
-css_class = st.text_input("Enter the CSS class:")
+st.title("Website Scraper and GPT-based Interaction")
 
-# Button to start the scraping process
-if st.button("Scrape"):
+# Web scraping UI
+url = st.text_input("Enter the URL to scrape:", key="url")
+css_class = st.text_input("Enter the CSS class:", key="css_class")
+if st.button("Scrape", key="scrape"):
     if url and css_class:
-        # Call the scrape_website function
         results = scrape_website(url, css_class)
         if results:
-            # Display the results in a text area, making it easy to copy
-            st.text_area("Scraped values:", value=results, height=300)
+            st.success("Scraping successful!")
+
+# Display scraped data
+if 'scraped_data' in st.session_state and st.session_state['scraped_data']:
+    st.write("Scraped Data:")
+    st.text_area("", value=st.session_state['scraped_data'], height=300, disabled=True, key="scraped_results")
+
+# GPT interaction UI, displayed conditionally
+if 'scraped_data' in st.session_state and st.session_state['scraped_data']:
+    st.markdown("## And now... ask GPT")
+    st.text_input("Enter your OpenAI API key (optional):", type="password", key="api_key")
+    question = st.text_area("Ask GPT about the scraped data:", key="question")
+    if st.button("Ask GPT"):
+        if st.session_state['api_key']:
+            answer = ask_gpt(st.session_state['scraped_data'], question)
+            if answer:
+                # Enhanced text area with copyable output
+                st.text_area("GPT's response:", value=answer, height=100, disabled=True, key="gpt_response")
         else:
-            st.write("No results found.")
-    else:
-        st.write("Please enter both URL and CSS class.")
+            st.error("Please provide an OpenAI API key to ask GPT.")
